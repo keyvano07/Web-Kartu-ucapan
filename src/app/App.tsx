@@ -295,7 +295,7 @@ export default function App() {
 
       const canvas = await html2canvas(element, {
         scale: 3, // Crisp resolution
-        useCORS: true,
+        useCORS: false,
         allowTaint: false,
         backgroundColor: null,
       });
