@@ -293,6 +293,13 @@ export default function App() {
       // Small timeout to ensure styling is settled
       await new Promise((resolve) => setTimeout(resolve, 200));
 
+      // Force crossorigin to anonymous on all images to prevent taint
+      const imagesToForce = element.querySelectorAll("img");
+      imagesToForce.forEach((img) => {
+        img.setAttribute("crossorigin", "anonymous");
+        img.crossOrigin = "anonymous";
+      });
+
       const canvas = await html2canvas(element, {
         scale: 3, // Crisp resolution
         useCORS: true,
