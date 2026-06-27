@@ -8,8 +8,7 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Label } from "./components/ui/label";
-// @ts-ignore
-import logoUrl from "./logo.png";
+import { logoBase64 } from "./logoBase64";
 
 interface CardTheme {
   id: string;
@@ -751,14 +750,13 @@ export default function App() {
           <div className="relative z-10 flex flex-col items-center text-center px-8 md:px-14 py-16 md:py-20 flex-1 justify-center">
             {showLogo && logoPosition === "top" && (
               <motion.img
-                src={logoUrl}
+                src={logoBase64}
                 alt="Sangaind Logo"
-                crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
                 }}
-                className="card-logo mb-4 object-contain brightness-110 contrast-105"
+                className="mb-4 object-contain brightness-110 contrast-105"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               />
@@ -898,14 +896,13 @@ export default function App() {
 
             {showLogo && logoPosition === "bottom" && (
               <motion.img
-                src={logoUrl}
+                src={logoBase64}
                 alt="Sangaind Logo"
-                crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
                 }}
-                className="card-logo mt-4 object-contain brightness-110 contrast-105"
+                className="mt-4 object-contain brightness-110 contrast-105"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               />
