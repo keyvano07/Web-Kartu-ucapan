@@ -8,6 +8,8 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Label } from "./components/ui/label";
+// @ts-ignore
+import logoImg from "./logo.png";
 
 interface CardTheme {
   id: string;
@@ -240,6 +242,9 @@ export default function App() {
   const [title, setTitle] = useState("Selamat");
   const [titleAccent, setTitleAccent] = useState("Hari Jadi");
   const [pdfSize, setPdfSize] = useState("original");
+  const [showLogo, setShowLogo] = useState(true);
+  const [logoSize, setLogoSize] = useState(100);
+  const [logoPosition, setLogoPosition] = useState<"top" | "bottom">("top");
   const [recipient, setRecipient] = useState("Nenek Nini");
   const [message, setMessage] = useState("Semoga nenek selalu diberikan kesehatan, kebahagiaan, dan kasih sayang yang berlimpah.");
   const [senderLabel, setSenderLabel] = useState("Dari Cucunda");
@@ -272,6 +277,9 @@ export default function App() {
     setSenders(["Dipta", "Dias", "Ditri"]);
     setThemeId("pink");
     setPdfSize("original");
+    setShowLogo(true);
+    setLogoSize(100);
+    setLogoPosition("top");
   };
 
   const downloadPDF = async () => {
@@ -506,6 +514,74 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* Logo Perusahaan Section */}
+            <div className="p-4 rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-900/30 space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-zinc-800 dark:text-zinc-200 font-bold flex items-center gap-2 text-xs uppercase tracking-wider">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+                  Logo Perusahaan (Sangaind)
+                </Label>
+                <input
+                  type="checkbox"
+                  checked={showLogo}
+                  onChange={(e) => setShowLogo(e.target.checked)}
+                  className="w-4 h-4 rounded text-rose-500 focus:ring-rose-400 border-zinc-300 dark:border-zinc-800 accent-rose-500 cursor-pointer"
+                />
+              </div>
+
+              {showLogo && (
+                <div className="space-y-3 pt-3 border-t border-zinc-200/50 dark:border-zinc-800/50">
+                  {/* Position selector */}
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block font-semibold">Posisi Logo</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLogoPosition("top")}
+                        className={`py-1.5 px-3 rounded-lg border text-xs font-semibold transition-all duration-200 ${
+                          logoPosition === "top"
+                            ? "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100 font-bold"
+                            : "border-transparent text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900/40"
+                        }`}
+                        style={logoPosition === "top" ? { borderColor: currentTheme.topLabelColor, color: currentTheme.titleColor } : {}}
+                      >
+                        Di Atas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLogoPosition("bottom")}
+                        className={`py-1.5 px-3 rounded-lg border text-xs font-semibold transition-all duration-200 ${
+                          logoPosition === "bottom"
+                            ? "bg-white dark:bg-zinc-900 border-zinc-300 dark:border-zinc-700 shadow-sm text-zinc-900 dark:text-zinc-100 font-bold"
+                            : "border-transparent text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-900/40"
+                        }`}
+                        style={logoPosition === "bottom" ? { borderColor: currentTheme.topLabelColor, color: currentTheme.titleColor } : {}}
+                      >
+                        Di Bawah
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Size slider */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+                      <span className="font-semibold">Lebar Logo</span>
+                      <span className="font-bold">{logoSize}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="60"
+                      max="180"
+                      step="5"
+                      value={logoSize}
+                      onChange={(e) => setLogoSize(Number(e.target.value))}
+                      className="w-full accent-rose-500 bg-zinc-200 dark:bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -653,6 +729,20 @@ export default function App() {
 
           {/* Main Card Content */}
           <div className="relative z-10 flex flex-col items-center text-center px-8 md:px-14 py-16 md:py-20 flex-1 justify-center">
+            {showLogo && logoPosition === "top" && (
+              <motion.img
+                src={logoImg}
+                alt="Sangaind Logo"
+                style={{
+                  width: `${logoSize}px`,
+                  filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
+                }}
+                className="mb-4 object-contain brightness-110 contrast-105"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+              />
+            )}
+
             {/* Top Tagline */}
             {topLabel && (
               <motion.p
@@ -784,6 +874,20 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {showLogo && logoPosition === "bottom" && (
+              <motion.img
+                src={logoImg}
+                alt="Sangaind Logo"
+                style={{
+                  width: `${logoSize}px`,
+                  filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
+                }}
+                className="mt-4 object-contain brightness-110 contrast-105"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+              />
+            )}
 
             {/* Bottom Sparkles row */}
             <div className="mt-5 opacity-70">
