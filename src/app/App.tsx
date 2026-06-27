@@ -8,7 +8,8 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Textarea } from "./components/ui/textarea";
 import { Label } from "./components/ui/label";
-import { logoBase64 } from "./logoBase64";
+// @ts-ignore
+import logoUrl from "./logo.png";
 
 interface CardTheme {
   id: string;
@@ -293,12 +294,22 @@ export default function App() {
       // Small timeout to ensure styling is settled
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Force crossorigin to anonymous on all images to prevent taint
-      const imagesToForce = element.querySelectorAll("img");
-      imagesToForce.forEach((img) => {
-        img.setAttribute("crossorigin", "anonymous");
-        img.crossOrigin = "anonymous";
-      });
+      // Get logo info and hide it temporarily to avoid canvas taint
+      const logoEl = element.querySelector(".card-logo") as HTMLImageElement | null;
+      let logoInfo: { relX: number; relY: number; width: number; height: number; src: string } | null = null;
+      
+      if (logoEl) {
+        const logoRect = logoEl.getBoundingClientRect();
+        const cardRect = element.getBoundingClientRect();
+        logoInfo = {
+          relX: logoRect.left - cardRect.left,
+          relY: logoRect.top - cardRect.top,
+          width: logoRect.width,
+          height: logoRect.height,
+          src: logoEl.src,
+        };
+        logoEl.style.visibility = "hidden";
+      }
 
       const canvas = await html2canvas(element, {
         scale: 3, // Crisp resolution
@@ -306,6 +317,32 @@ export default function App() {
         allowTaint: false,
         backgroundColor: null,
       });
+
+      // Restore logo visibility
+      if (logoEl) {
+        logoEl.style.visibility = "visible";
+      }
+
+      // Draw logo manually on the canvas to bypass cross-origin taint
+      if (logoInfo && logoInfo.src) {
+        const img = new Image();
+        img.src = logoInfo.src;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const scale = 3;
+          ctx.drawImage(
+            img,
+            logoInfo.relX * scale,
+            logoInfo.relY * scale,
+            logoInfo.width * scale,
+            logoInfo.height * scale
+          );
+        }
+      }
 
       const imgData = canvas.toDataURL("image/png");
       const imgWidth = element.offsetWidth;
@@ -755,14 +792,14 @@ export default function App() {
           <div className="relative z-10 flex flex-col items-center text-center px-8 md:px-14 py-16 md:py-20 flex-1 justify-center">
             {showLogo && logoPosition === "top" && (
               <motion.img
-                src={logoBase64}
+                src={logoUrl}
                 alt="Sangaind Logo"
                 crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
                 }}
-                className="mb-4 object-contain brightness-110 contrast-105"
+                className="card-logo mb-4 object-contain brightness-110 contrast-105"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               />
@@ -902,14 +939,14 @@ export default function App() {
 
             {showLogo && logoPosition === "bottom" && (
               <motion.img
-                src={logoBase64}
+                src={logoUrl}
                 alt="Sangaind Logo"
                 crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
                 }}
-                className="mt-4 object-contain brightness-110 contrast-105"
+                className="card-logo mt-4 object-contain brightness-110 contrast-105"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
               />
