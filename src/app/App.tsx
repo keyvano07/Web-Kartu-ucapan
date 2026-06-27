@@ -295,7 +295,7 @@ export default function App() {
 
       const canvas = await html2canvas(element, {
         scale: 3, // Crisp resolution
-        useCORS: false,
+        useCORS: true,
         allowTaint: false,
         backgroundColor: null,
       });
@@ -750,6 +750,7 @@ export default function App() {
               <motion.img
                 src={logoBase64}
                 alt="Sangaind Logo"
+                crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
@@ -896,6 +897,7 @@ export default function App() {
               <motion.img
                 src={logoBase64}
                 alt="Sangaind Logo"
+                crossOrigin="anonymous"
                 style={{
                   width: `${logoSize}px`,
                   filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.12))",
