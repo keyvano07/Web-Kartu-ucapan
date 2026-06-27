@@ -294,55 +294,14 @@ export default function App() {
       // Small timeout to ensure styling is settled
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      // Get logo info and hide it temporarily to avoid canvas taint
-      const logoEl = element.querySelector(".card-logo") as HTMLImageElement | null;
-      let logoInfo: { relX: number; relY: number; width: number; height: number; src: string } | null = null;
-      
-      if (logoEl) {
-        const logoRect = logoEl.getBoundingClientRect();
-        const cardRect = element.getBoundingClientRect();
-        logoInfo = {
-          relX: logoRect.left - cardRect.left,
-          relY: logoRect.top - cardRect.top,
-          width: logoRect.width,
-          height: logoRect.height,
-          src: logoEl.src,
-        };
-        logoEl.style.visibility = "hidden";
-      }
-
+      // Logo is a local Vite asset (same-origin) — html2canvas can capture it directly.
+      // No need to hide/show or manually redraw. Just render as-is.
       const canvas = await html2canvas(element, {
-        scale: 3, // Crisp resolution
+        scale: 3,
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
       });
-
-      // Restore logo visibility
-      if (logoEl) {
-        logoEl.style.visibility = "visible";
-      }
-
-      // Draw logo manually on the canvas to bypass cross-origin taint
-      if (logoInfo && logoInfo.src) {
-        const img = new Image();
-        img.src = logoInfo.src;
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          const scale = 3;
-          ctx.drawImage(
-            img,
-            logoInfo.relX * scale,
-            logoInfo.relY * scale,
-            logoInfo.width * scale,
-            logoInfo.height * scale
-          );
-        }
-      }
 
       const imgData = canvas.toDataURL("image/png");
       const imgWidth = element.offsetWidth;
