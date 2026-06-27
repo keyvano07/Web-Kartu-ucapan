@@ -334,7 +334,25 @@ export default function App() {
       });
     } catch (err: any) {
       console.error("PDF generation failed:", err);
-      alert("Gagal mengunduh PDF. Detail error: " + (err.message || err));
+      let diagnostics = "";
+      try {
+        const images = element.querySelectorAll("img");
+        diagnostics += `\nImages found inside card: ${images.length}`;
+        images.forEach((img, i) => {
+          diagnostics += `\n- Img #${i} src: ${img.src.substring(0, 80)}... (len: ${img.src.length}), crossOrigin: ${img.crossOrigin}`;
+        });
+
+        const children = element.querySelectorAll("*");
+        children.forEach((c) => {
+          const bg = window.getComputedStyle(c).backgroundImage;
+          if (bg && bg !== "none") {
+            diagnostics += `\n- BG on <${c.tagName.toLowerCase()}> class="${c.className.substring(0, 30)}": ${bg.substring(0, 80)}`;
+          }
+        });
+      } catch (diagErr) {
+        diagnostics += `\n(Diagnostics gathering failed: ${diagErr})`;
+      }
+      alert("Gagal mengunduh PDF. Detail error: " + (err.message || err) + "\n" + diagnostics);
     } finally {
       setIsDownloading(false);
     }
