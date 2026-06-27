@@ -290,65 +290,49 @@ export default function App() {
     }
 
     try {
-      // Wait for Framer Motion animations to fully settle
+      // Wait for Framer Motion animations to fully settle (card animates over 0.8s)
       await new Promise((resolve) => setTimeout(resolve, 950));
 
-      // Pre-render the logo onto an offscreen canvas (main document context = no taint)
-      // then pass it as a plain data URL into the cloned DOM via onclone.
-      let safeLogoUrl: string | null = null;
-      if (showLogo) {
-        const tmpImg = new Image();
-        tmpImg.src = logoBase64;
-        await new Promise<void>((resolve) => {
-          if (tmpImg.complete && tmpImg.naturalWidth > 0) { resolve(); return; }
-          tmpImg.onload = () => resolve();
-          tmpImg.onerror = () => resolve();
-        });
+      const imgWidth = element.offsetWidth;
+      const imgHeight = element.offsetHeight;
 
-        if (tmpImg.naturalWidth > 0) {
-          const tmpCanvas = document.createElement("canvas");
-          tmpCanvas.width = tmpImg.naturalWidth;
-          tmpCanvas.height = tmpImg.naturalHeight;
-          tmpCanvas.getContext("2d")!.drawImage(tmpImg, 0, 0);
-          // toDataURL on a canvas drawn from a data-URI image is always safe
-          safeLogoUrl = tmpCanvas.toDataURL("image/png");
-        }
+      // Find logo element and measure its position BEFORE rendering
+      const logoEl = element.querySelector("img[alt='Sangaind Logo']") as HTMLImageElement | null;
+      let logoPos: { xFrac: number; yFrac: number; wFrac: number; hFrac: number } | null = null;
+
+      if (logoEl && showLogo) {
+        const cardRect = element.getBoundingClientRect();
+        const r = logoEl.getBoundingClientRect();
+        // Store position as FRACTIONS of card size (scale-independent)
+        logoPos = {
+          xFrac: (r.left - cardRect.left) / imgWidth,
+          yFrac: (r.top  - cardRect.top)  / imgHeight,
+          wFrac: r.width  / imgWidth,
+          hFrac: r.height / imgHeight,
+        };
       }
 
+      // Render card WITHOUT the logo — ignoreElements prevents any canvas taint
       const canvas = await html2canvas(element, {
         scale: 3,
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
-        onclone: (_clonedDoc, clonedEl) => {
-          if (!safeLogoUrl) return;
-          // Replace the logo img src in the cloned DOM so html2canvas
-          // renders the pre-drawn canvas data — no cross-origin taint.
-          const clonedLogo = clonedEl.querySelector(
-            "img[alt='Sangaind Logo']"
-          ) as HTMLImageElement | null;
-          if (clonedLogo) {
-            clonedLogo.src = safeLogoUrl;
-            clonedLogo.removeAttribute("crossorigin");
-          }
-        },
+        ignoreElements: (el) => el === logoEl,
       });
 
       const imgData = canvas.toDataURL("image/png");
 
-      const imgWidth = element.offsetWidth;
-      const imgHeight = element.offsetHeight;
-
-      // Convert dimensions to mm for PDF
+      // Convert card dimensions to mm for PDF
       const isLandscape = imgWidth > imgHeight;
       const selectedSize = PDF_SIZES.find((opt) => opt.id === pdfSize) || PDF_SIZES[0];
 
-      let pdfWidth = imgWidth * 0.264583;
+      let pdfWidth  = imgWidth  * 0.264583;
       let pdfHeight = imgHeight * 0.264583;
 
       if (selectedSize.id !== "original") {
-        pdfWidth = isLandscape ? selectedSize.heightMm : selectedSize.widthMm;
-        pdfHeight = isLandscape ? selectedSize.widthMm : selectedSize.heightMm;
+        pdfWidth  = isLandscape ? selectedSize.heightMm : selectedSize.widthMm;
+        pdfHeight = isLandscape ? selectedSize.widthMm  : selectedSize.heightMm;
       }
 
       const pdf = new jsPDF(
@@ -357,16 +341,27 @@ export default function App() {
         [pdfWidth, pdfHeight]
       );
 
+      // Add the card background (without logo)
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+      // Overlay logo directly via jsPDF — no canvas involved, no taint possible
+      if (logoPos) {
+        const xMm = logoPos.xFrac * pdfWidth;
+        const yMm = logoPos.yFrac * pdfHeight;
+        const wMm = logoPos.wFrac * pdfWidth;
+        const hMm = logoPos.hFrac * pdfHeight;
+        pdf.addImage(logoBase64, "PNG", xMm, yMm, wMm, hMm);
+      }
+
       pdf.save(`kartu-ucapan-${recipient.toLowerCase().replace(/[^a-z0-9]/g, "-")}.pdf`);
 
-      // Trigger celebration confetti
       confetti({
         particleCount: 150,
         spread: 80,
         origin: { y: 0.6 },
         colors: currentTheme.petalColors,
       });
+
     } catch (err: any) {
       console.error("PDF generation failed:", err);
       let diagnostics = "";
