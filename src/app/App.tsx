@@ -219,10 +219,27 @@ const SparkleRow = ({ color }: { color: string }) => (
   </div>
 );
 
+interface PDFSizeOption {
+  id: string;
+  name: string;
+  desc: string;
+  widthMm: number;  // Portrait width
+  heightMm: number; // Portrait height
+}
+
+const PDF_SIZES: PDFSizeOption[] = [
+  { id: "original", name: "Rasio Asli (Default)", desc: "Sesuai tampilan layar asli", widthMm: 0, heightMm: 0 },
+  { id: "10x7", name: "Mini (10x7 cm)", desc: "Ukuran kartu ucapan kecil", widthMm: 70, heightMm: 100 },
+  { id: "a6", name: "A6 (Postcard)", desc: "Ukuran standar kartu pos (10.5x14.8 cm)", widthMm: 105, heightMm: 148 },
+  { id: "a5", name: "A5 (Sedang)", desc: "Ukuran setengah A4 (14.8x21 cm)", widthMm: 148, heightMm: 210 },
+  { id: "a4", name: "A4 (Besar/Standar)", desc: "Ukuran kertas dokumen (21x29.7 cm)", widthMm: 210, heightMm: 297 },
+];
+
 export default function App() {
   const [topLabel, setTopLabel] = useState("with love & warmth");
   const [title, setTitle] = useState("Selamat");
   const [titleAccent, setTitleAccent] = useState("Hari Jadi");
+  const [pdfSize, setPdfSize] = useState("original");
   const [recipient, setRecipient] = useState("Nenek Nini");
   const [message, setMessage] = useState("Semoga nenek selalu diberikan kesehatan, kebahagiaan, dan kasih sayang yang berlimpah.");
   const [senderLabel, setSenderLabel] = useState("Dari Cucunda");
@@ -254,6 +271,7 @@ export default function App() {
     setSenderLabel("Dari Cucunda");
     setSenders(["Dipta", "Dias", "Ditri"]);
     setThemeId("pink");
+    setPdfSize("original");
   };
 
   const downloadPDF = async () => {
@@ -280,11 +298,19 @@ export default function App() {
       const imgHeight = element.offsetHeight;
 
       // Convert dimensions to mm for PDF
-      const pdfWidth = imgWidth * 0.264583;
-      const pdfHeight = imgHeight * 0.264583;
+      const isLandscape = imgWidth > imgHeight;
+      const selectedSize = PDF_SIZES.find((opt) => opt.id === pdfSize) || PDF_SIZES[0];
+
+      let pdfWidth = imgWidth * 0.264583;
+      let pdfHeight = imgHeight * 0.264583;
+
+      if (selectedSize.id !== "original") {
+        pdfWidth = isLandscape ? selectedSize.heightMm : selectedSize.widthMm;
+        pdfHeight = isLandscape ? selectedSize.widthMm : selectedSize.heightMm;
+      }
 
       const pdf = new jsPDF(
-        pdfWidth > pdfHeight ? "landscape" : "portrait",
+        isLandscape ? "landscape" : "portrait",
         "mm",
         [pdfWidth, pdfHeight]
       );
@@ -483,7 +509,46 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-zinc-200/50 dark:border-zinc-800/50 pt-4">
+        <div className="mt-8 border-t border-zinc-200/50 dark:border-zinc-800/50 pt-4 space-y-4">
+          {/* PDF Size Selector */}
+          <div className="space-y-2">
+            <Label className="text-zinc-700 dark:text-zinc-300 font-semibold flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-zinc-500" />
+              Ukuran Kertas Ekspor PDF
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {PDF_SIZES.map((opt, idx) => (
+                <button
+                  key={opt.id}
+                  onClick={() => setPdfSize(opt.id)}
+                  className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all duration-200 ${
+                    idx === 0 ? "col-span-2" : ""
+                  } ${
+                    pdfSize === opt.id
+                      ? "border-zinc-800 dark:border-zinc-200 bg-zinc-50 dark:bg-zinc-900/50 text-zinc-900 dark:text-zinc-50 font-semibold shadow-sm"
+                      : "border-zinc-200 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 text-zinc-500 dark:text-zinc-400"
+                  }`}
+                  style={
+                    pdfSize === opt.id
+                      ? {
+                          borderColor: currentTheme.topLabelColor,
+                          background: `${currentTheme.topLabelColor}08`,
+                        }
+                      : {}
+                  }
+                >
+                  <span
+                    className="font-bold text-xs"
+                    style={pdfSize === opt.id ? { color: currentTheme.titleColor } : {}}
+                  >
+                    {opt.name}
+                  </span>
+                  <span className="text-[10px] opacity-70 mt-0.5">{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button
             onClick={downloadPDF}
             disabled={isDownloading}
