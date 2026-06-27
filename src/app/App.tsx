@@ -290,60 +290,52 @@ export default function App() {
     }
 
     try {
-      // Wait for all Framer Motion animations to settle
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      // Wait for Framer Motion animations to fully settle
+      await new Promise((resolve) => setTimeout(resolve, 950));
 
-      // --- STEP 1: Measure logo position (before anything changes) ---
-      const logoEl = element.querySelector("img[alt='Sangaind Logo']") as HTMLImageElement | null;
-      const cardRect = element.getBoundingClientRect();
-      let logoPos: { x: number; y: number; w: number; h: number } | null = null;
-      if (logoEl && showLogo) {
-        const r = logoEl.getBoundingClientRect();
-        logoPos = {
-          x: r.left - cardRect.left,
-          y: r.top - cardRect.top,
-          w: r.width,
-          h: r.height,
-        };
-      }
-
-      // --- STEP 2: Pre-load logo as fresh Image in main document (no taint risk) ---
-      let freshLogoImg: HTMLImageElement | null = null;
-      if (logoPos) {
-        freshLogoImg = new Image();
-        freshLogoImg.src = logoBase64;
+      // Pre-render the logo onto an offscreen canvas (main document context = no taint)
+      // then pass it as a plain data URL into the cloned DOM via onclone.
+      let safeLogoUrl: string | null = null;
+      if (showLogo) {
+        const tmpImg = new Image();
+        tmpImg.src = logoBase64;
         await new Promise<void>((resolve) => {
-          if (freshLogoImg!.complete && freshLogoImg!.naturalWidth > 0) { resolve(); return; }
-          freshLogoImg!.onload = () => resolve();
-          freshLogoImg!.onerror = () => resolve();
+          if (tmpImg.complete && tmpImg.naturalWidth > 0) { resolve(); return; }
+          tmpImg.onload = () => resolve();
+          tmpImg.onerror = () => resolve();
         });
+
+        if (tmpImg.naturalWidth > 0) {
+          const tmpCanvas = document.createElement("canvas");
+          tmpCanvas.width = tmpImg.naturalWidth;
+          tmpCanvas.height = tmpImg.naturalHeight;
+          tmpCanvas.getContext("2d")!.drawImage(tmpImg, 0, 0);
+          // toDataURL on a canvas drawn from a data-URI image is always safe
+          safeLogoUrl = tmpCanvas.toDataURL("image/png");
+        }
       }
 
-      // --- STEP 3: Render card WITHOUT the logo (ignoreElements prevents canvas taint) ---
       const canvas = await html2canvas(element, {
         scale: 3,
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
-        ignoreElements: (el) => el === logoEl,
+        onclone: (_clonedDoc, clonedEl) => {
+          if (!safeLogoUrl) return;
+          // Replace the logo img src in the cloned DOM so html2canvas
+          // renders the pre-drawn canvas data — no cross-origin taint.
+          const clonedLogo = clonedEl.querySelector(
+            "img[alt='Sangaind Logo']"
+          ) as HTMLImageElement | null;
+          if (clonedLogo) {
+            clonedLogo.src = safeLogoUrl;
+            clonedLogo.removeAttribute("crossorigin");
+          }
+        },
       });
 
-      // --- STEP 4: Draw logo manually onto the final canvas ---
-      // This happens in the main document context, so it never taints the canvas.
-      if (logoPos && freshLogoImg && freshLogoImg.naturalWidth > 0) {
-        const ctx = canvas.getContext("2d");
-        if (ctx) {
-          ctx.drawImage(
-            freshLogoImg,
-            logoPos.x * 3,
-            logoPos.y * 3,
-            logoPos.w * 3,
-            logoPos.h * 3
-          );
-        }
-      }
-
       const imgData = canvas.toDataURL("image/png");
+
       const imgWidth = element.offsetWidth;
       const imgHeight = element.offsetHeight;
 
