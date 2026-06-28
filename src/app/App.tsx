@@ -310,16 +310,22 @@ export default function App() {
           wFrac: r.width  / imgWidth,
           hFrac: r.height / imgHeight,
         };
+        // visibility:hidden hides the image pixels (prevents canvas taint)
+        // but PRESERVES the layout space — content stays in correct position
+        logoEl.style.visibility = "hidden";
       }
 
-      // Render card WITHOUT the logo — ignoreElements prevents any canvas taint
+      // Render card — logo is invisible so no canvas taint, but layout is intact
       const canvas = await html2canvas(element, {
         scale: 3,
         useCORS: true,
         allowTaint: false,
         backgroundColor: null,
-        ignoreElements: (el) => el === logoEl,
       });
+
+      // Restore logo visibility in DOM immediately after capture
+      if (logoEl) logoEl.style.visibility = "";
+
 
       const imgData = canvas.toDataURL("image/png");
 
