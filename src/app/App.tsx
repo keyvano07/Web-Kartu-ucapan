@@ -290,32 +290,27 @@ export default function App() {
     }
 
     try {
-      // Wait for Framer Motion animations to fully settle (card animates over 0.8s)
-      await new Promise((resolve) => setTimeout(resolve, 950));
+      // Wait for fonts and animations to fully settle
+      await document.fonts.ready;
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const imgWidth = element.offsetWidth;
+      const imgWidth  = element.offsetWidth;
       const imgHeight = element.offsetHeight;
 
-      // Find logo element and measure its position BEFORE rendering
+      // Measure logo position as fraction of card layout size
       const logoEl = element.querySelector("img[alt='Sangaind Logo']") as HTMLImageElement | null;
       let logoPos: { xFrac: number; yFrac: number; wFrac: number; hFrac: number } | null = null;
 
       if (logoEl && showLogo) {
-        const cardRect = element.getBoundingClientRect();
-        const r = logoEl.getBoundingClientRect();
-        // Store position as FRACTIONS of card size (scale-independent)
         logoPos = {
-          xFrac: (r.left - cardRect.left) / imgWidth,
-          yFrac: (r.top  - cardRect.top)  / imgHeight,
-          wFrac: r.width  / imgWidth,
-          hFrac: r.height / imgHeight,
+          xFrac: logoEl.offsetLeft / imgWidth,
+          yFrac: logoEl.offsetTop  / imgHeight,
+          wFrac: logoEl.offsetWidth  / imgWidth,
+          hFrac: logoEl.offsetHeight / imgHeight,
         };
-        // visibility:hidden hides the image pixels (prevents canvas taint)
-        // but PRESERVES the layout space — content stays in correct position
         logoEl.style.visibility = "hidden";
       }
 
-      // Render card — logo is invisible so no canvas taint, but layout is intact
       const canvas = await html2canvas(element, {
         scale: 3,
         useCORS: true,
@@ -323,18 +318,19 @@ export default function App() {
         backgroundColor: null,
       });
 
-      // Restore logo visibility in DOM immediately after capture
       if (logoEl) logoEl.style.visibility = "";
 
+      // Use actual canvas render dimensions — reliable across all environments
+      const renderedW = canvas.width  / 3;
+      const renderedH = canvas.height / 3;
 
       const imgData = canvas.toDataURL("image/png");
 
-      // Convert card dimensions to mm for PDF
-      const isLandscape = imgWidth > imgHeight;
+      const isLandscape = renderedW > renderedH;
       const selectedSize = PDF_SIZES.find((opt) => opt.id === pdfSize) || PDF_SIZES[0];
 
-      let pdfWidth  = imgWidth  * 0.264583;
-      let pdfHeight = imgHeight * 0.264583;
+      let pdfWidth  = renderedW * 0.264583;
+      let pdfHeight = renderedH * 0.264583;
 
       if (selectedSize.id !== "original") {
         pdfWidth  = isLandscape ? selectedSize.heightMm : selectedSize.widthMm;
@@ -347,26 +343,21 @@ export default function App() {
         [pdfWidth, pdfHeight]
       );
 
-      // Add the card background (without logo)
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
 
-      // Overlay logo directly via jsPDF — no canvas involved, no taint possible
       if (logoPos) {
-        const xMm = logoPos.xFrac * pdfWidth;
-        const yMm = logoPos.yFrac * pdfHeight;
-        const wMm = logoPos.wFrac * pdfWidth;
-        const hMm = logoPos.hFrac * pdfHeight;
-        pdf.addImage(logoBase64, "PNG", xMm, yMm, wMm, hMm);
+        pdf.addImage(
+          logoBase64, "PNG",
+          logoPos.xFrac * pdfWidth,
+          logoPos.yFrac * pdfHeight,
+          logoPos.wFrac * pdfWidth,
+          logoPos.hFrac * pdfHeight
+        );
       }
 
       pdf.save(`kartu-ucapan-${recipient.toLowerCase().replace(/[^a-z0-9]/g, "-")}.pdf`);
 
-      confetti({
-        particleCount: 150,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: currentTheme.petalColors,
-      });
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: currentTheme.petalColors });
 
     } catch (err: any) {
       console.error("PDF generation failed:", err);
